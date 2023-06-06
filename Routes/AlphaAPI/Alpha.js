@@ -10,6 +10,7 @@ const alpha = createAlpha('192.168.1.25', 502);
 router.get('/data', (req, res) => {
   const values = alpha.getValues();
   const data = {
+    id : 200,
     powerUsed: values[0],
     averagePowerUsed: values[1],
     energyUsedF1: values[2],
