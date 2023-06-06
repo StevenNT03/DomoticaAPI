@@ -16,5 +16,11 @@ COPY . .
 # Esponi la porta del server
 EXPOSE 3000
 
+# Imposta le variabili d'ambiente
+ENV INFLUX_TOKEN=3YkAmCMX6u3PUZg-1RgdUNJnjq5b_OQ6tyHspe2HhLPLaQDFMjgteaYPRnrmoJTDExEnfqdcv3NYvR1DMgZfSA==
+ENV INFLUX_ORG=d
+ENV INFLUX_BUCKET=CoffeData
+ENV INFLUX_IP_ADDRESS=192.168.1.6
+
 # Avvia l'applicazione
 CMD [ "npm", "start" ]

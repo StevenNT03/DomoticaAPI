@@ -7,8 +7,8 @@ const dotenv = require('dotenv');
 dotenv.config(); // Carica le variabili d'ambiente dal file .env
 
 // Ora puoi accedere alle variabili d'ambiente nel tuo codice
-const clientId = process.env.clientId;
-const clientSecret = process.env.clientSecret;
+const clientId = process.env.TRACKLE_clientId;
+const clientSecret = process.env.TRACKLE_clientSecret;
 
 const app = express();
 

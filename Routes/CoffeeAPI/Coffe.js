@@ -12,11 +12,11 @@ firstMachine.start();
 const router = express.Router();
 
 // Configurazione del client InfluxDB
-const ipAddress = process.env.IP_ADDRESS;
+const ipAddress = process.env.INFLUX_IP_ADDRESS;
 
-const token = process.env.TOKEN;
-const org = process.env.ORG;
-const bucket = process.env.BUCKET;
+const token = process.env.INFLUX_TOKEN;
+const org = process.env.INFLUX_ORG;
+const bucket = process.env.INFLUX_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
 
