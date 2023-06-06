@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Comunicazione con l'API del caffè</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      background-color: #f1f1f1; /* Colore di sfondo di fallback */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .background-image {
+      background-image: url("https://i.pinimg.com/originals/f2/d6/2a/f2d62a757628cbfc7f6d35dc1959fab5.jpg");
+      background-size: cover;
+      background-position: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      filter: blur(5px);
+      z-index: -1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 4px;
+      text-align: center;
+      background-color: transparent;
+      display: inline-block;
+      border-radius: 20px;
+      width: fit-content;
+    }
+
+    .title-container {
+      position: relative;
+      z-index: 1;
+      padding: 4px;
+      text-align: center;
+      background-color: white;
+      display: inline-block;
+      border-radius: 20px;
+      width: fit-content;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .coffee-button {
+      display: inline-block;
+      margin: 10px;
+      transition: transform 0.3s ease;
+      width: 100px; /* Imposta la larghezza desiderata */
+      height: 100px; /* Imposta l'altezza desiderata */
+      border-radius: 20px;
+    }
+
+    .coffee-button:hover {
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="background-image"></div>
+  <div class="title-container">
+    <h1>Selezionare numero di caffè: </h1>
+  </div>
+  <div class="container">
+    <img class="coffee-button" src="https://st2.depositphotos.com/4966263/7336/v/450/depositphotos_73365089-stock-illustration-hand-drawn-watercolor-coffee-cup.jpg" alt="Caffè 1" onclick="inviaValore(1)">
+    <img class="coffee-button" src="https://previews.123rf.com/images/vostal/vostal1606/vostal160600038/59064425-disegno-a-mano-di-due-tazze-di-caff%C3%A8.jpg" alt="Caffè 2" onclick="inviaValore(2)">
+  </div>
+
+  <script>
+    function inviaValore(valore) {
+      axios.post('/api/coffee/' + valore)
+        .then(function (response) {
+          console.log(response.data);
+          alert('Dati del caffè inviati con successo!');
+        })
+        .catch(function (error) {
+          console.error(error);
+          alert("Si è verificato un errore durante l'invio dei dati del caffè");
+        });
+      }
+   
+
+    
+  </script>
+</body>
+</html>

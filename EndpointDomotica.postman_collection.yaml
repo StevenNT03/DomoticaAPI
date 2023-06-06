@@ -1,0 +1,157 @@
+openapi: 3.0.0
+info:
+  title: EndpointDomotica
+  version: 1.0.0
+paths:
+  /api/shelly/relays/all:
+    get:
+      tags:
+        - ShellyAPI
+      summary: Get relays full info
+      responses:
+        '200':
+          description: OK
+
+  /api/shelly/relays/all/off:
+    post:
+      tags:
+        - ShellyAPI
+      summary: Turn off all relays
+      responses:
+        '200':
+          description: OK
+
+  /api/shelly/relays/{id}/status:
+    get:
+      tags:
+        - ShellyAPI
+      summary: Get relay full info
+      parameters:
+        - name: id
+          in: path
+          description: ID of the relay
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/shelly/relays/{id}/off:
+    post:
+      tags:
+        - ShellyAPI
+      summary: Turn off relay
+      parameters:
+        - name: id
+          in: path
+          description: ID of the relay
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/shelly/relays/{id}/on:
+    post:
+      tags:
+        - ShellyAPI
+      summary: Turn on relay
+      parameters:
+        - name: id
+          in: path
+          description: ID of the relay
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/shelly/relays/{id}/toggle:
+    post:
+      tags:
+        - ShellyAPI
+      summary: Toggle relay
+      parameters:
+        - name: id
+          in: path
+          description: ID of the relay
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/coffee/data:
+    get:
+      tags:
+        - CoffeeAPI
+      summary: Get data from coffee smart plug
+      responses:
+        '200':
+          description: OK
+
+  /api/coffee/{number}:
+    post:
+      tags:
+        - CoffeeAPI
+      summary: Get data from coffee smart plug
+      parameters:
+        - name: number
+          in: path
+          description: Number parameter for coffee smart plug
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK. Returns data from the coffee smart plug.
+
+  /api/tplink/data:
+    get:
+      tags:
+        - TpLinkAPI
+      summary: Get data from tplink smart plug
+      responses:
+        '200':
+          description: OK
+
+  /api/tplink/on:
+    post:
+      tags:
+        - TpLinkAPI
+      summary: Turn on printer smart plug
+      responses:
+        '200':
+          description: OK
+
+  /api/tplink/off:
+    post:
+      tags:
+        - TpLinkAPI
+      summary: Turn off printer smart plug
+      responses:
+        '200':
+          description: OK
+
+  /api/alpha/data:
+    get:
+      tags:
+        - AlphaAPI
+      summary: Get alpha data
+      responses:
+        '200':
+          description: OK
+
+tags:
+  - name: ShellyAPI
+    description: APIs related to Shelly devices
+  - name: CoffeeAPI
+    description: APIs related to the Coffee smart plug
+  - name: TpLinkAPI
+    description: APIs related to the TpLink smart plug
+  - name: AlphaAPI
+    description: APIs related to Alpha devices
