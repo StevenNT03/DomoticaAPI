@@ -50,6 +50,7 @@ router.get('/data', (req, res) => {
     .getDataAndCount()
     .then((data) => {
       const jsonData = {
+        id: 100,
         coffes: coffes,
         data: data
       };

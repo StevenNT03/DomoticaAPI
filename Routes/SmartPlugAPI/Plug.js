@@ -24,6 +24,7 @@ router.post('/off', (req, res) => {
 router.get('/data', (req, res) => {
   tplink.ottieniConsumi().then(tplinkData => {
     const jsonData = {
+      id : 300,
       tplinkStampante: tplinkData
     };
     res.json(jsonData);
