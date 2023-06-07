@@ -57,7 +57,17 @@ function getShellyInstance(relayId) {
   return { shelly, relayId, room };
 }
 
-// Endpoint per spegnere tutti i relè
+/**
+ * @swagger
+ * /api/shelly/relays/all/off:
+ *   post:
+ *     tags:
+ *       - ShellyAPI
+ *     summary: Turn off all relays
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.post('/relays/all/off', (req, res) => {
   const promises = [];
 
@@ -73,7 +83,17 @@ router.post('/relays/all/off', (req, res) => {
       res.status(500).json({ error: 'Errore durante lo spegnimento dei relè.' });
     });
 });
-// Endpoint per ottenere lo stato di tutti i relè
+/**
+ * @swagger
+ * /api/shelly/relays/all/status:
+ *   get:
+ *     tags:
+ *       - ShellyAPI
+ *     summary: Get relays full info
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.get('/relays/all/status', (req, res) => {
   const promises = [];
   const statesWithRoom = [];
@@ -99,7 +119,25 @@ router.get('/relays/all/status', (req, res) => {
       res.status(500).json({ error: 'Impossibile ottenere lo stato dei relè.' });
     });
 });
-// Endpoint per ottenere lo stato di un relè
+
+/** 
+* @swagger
+* /api/shelly/relays/{id}/status:
+*   get:
+*     tags:
+*       - ShellyAPI
+*     summary: Get relay full info
+*     parameters:
+*       - name: id
+*         in: path
+*         description: ID of the relay
+*         required: true
+*         schema:
+*           type: string
+*     responses:
+*       '200':
+*         description: OK
+*/
 router.get('/relays/:relayId/status', (req, res) => {
   const relayId = parseInt(req.params.relayId);
   const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
@@ -118,7 +156,25 @@ router.get('/relays/:relayId/status', (req, res) => {
 });
 
 
-// Endpoint per attivare o disattivare un relè
+
+/**
+ * @swagger
+ * /api/shelly/relays/{id}/toggle:
+ *   post:
+ *     tags:
+ *       - ShellyAPI
+ *     summary: Toggle relay
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID of the relay
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.post('/relays/:relayId/toggle', (req, res) => {
   const relayId = parseInt(req.params.relayId);
   const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
@@ -136,7 +192,24 @@ router.post('/relays/:relayId/toggle', (req, res) => {
   }
 });
 
-// Endpoint per spegnere un relè specifico
+/**
+ * @swagger
+ * /api/shelly/relays/{id}/off:
+ *   post:
+ *     tags:
+ *       - ShellyAPI
+ *     summary: Turn off relay
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID of the relay
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.post('/relays/:relayId/off', (req, res) => {
   const relayId = parseInt(req.params.relayId);
   const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
@@ -154,7 +227,26 @@ router.post('/relays/:relayId/off', (req, res) => {
   }
 });
 
-// Endpoint per accendere un relè specifico
+
+
+/**
+ * @swagger
+ * /api/shelly/relays/{id}/on:
+ *   post:
+ *     tags:
+ *       - ShellyAPI
+ *     summary: Turn on relay
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID of the relay
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.post('/relays/:relayId/on', (req, res) => {
   const relayId = parseInt(req.params.relayId);
   const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);

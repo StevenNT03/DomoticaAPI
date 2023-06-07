@@ -51,6 +51,7 @@ function createTPLink(ipAddress) {
       client.getDevice({ host: ipAddress }).then(device => {
         device.emeter.getRealtime().then(emeterRealtime => {
           const consumi = {
+            id : 300,
             power: {
               value: emeterRealtime.power,
               unit: 'W'

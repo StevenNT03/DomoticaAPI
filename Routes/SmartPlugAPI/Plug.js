@@ -6,25 +6,21 @@ const  createTplink= require('../../obj/tplinkManager');
 const tplink = createTplink("192.168.1.26"); // Crea l'oggetto TP-Link con l'indirizzo IP
 
 
-
-// Endpoint per accendere il TP-Link
-router.post('/on', (req, res) => {
-  tplink.accendiPresa();
-  res.send('Presa accesa');
-});
-
-// Endpoint per spegnere il TP-Link
-router.post('/off', (req, res) => {
-  tplink.spegniPresa();
-  res.send('Presa spenta');
-});
-
-// Endpoint per ottenere i dati della macchinetta del tplink
+/**
+ * @swagger
+ * /api/tplink/data:
+ *   get:
+ *     tags:
+ *       - TpLinkAPI
+ *     summary: Get data from tplink smart plug
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 
 router.get('/data', (req, res) => {
   tplink.ottieniConsumi().then(tplinkData => {
     const jsonData = {
-      id : 300,
       tplinkStampante: tplinkData
     };
     res.json(jsonData);
@@ -34,7 +30,52 @@ router.get('/data', (req, res) => {
   });
 });
 
-// Endpoint per ottenere lo stato di accensione/spengimento della presa
+/**
+ * @swagger
+ * /api/tplink/on:
+ *   post:
+ *     tags:
+ *       - TpLinkAPI
+ *     summary: Turn on printer smart plug
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
+
+router.post('/on', (req, res) => {
+  tplink.accendiPresa();
+  res.send('Presa accesa');
+});
+
+/**
+ * @swagger
+ * /api/tplink/off:
+ *   post:
+ *     tags:
+ *       - TpLinkAPI
+ *     summary: Turn off printer smart plug
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
+
+router.post('/off', (req, res) => {
+  tplink.spegniPresa();
+  res.send('Presa spenta');
+});
+
+
+/**
+ * @swagger
+ * /api/tplink/status:
+ *   get:
+ *     tags:
+ *       - TpLinkAPI
+ *     summary: Get status of the printer smart plug
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.get('/status', (req, res) => {
   tplink.isPresaAccesa().then(powerState => {
     const status = powerState;

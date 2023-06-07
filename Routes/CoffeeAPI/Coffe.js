@@ -19,8 +19,24 @@ const org = process.env.INFLUX_ORG;
 const bucket = process.env.INFLUX_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
-
-// Endpoint per la registrazione dei dati del caffè
+/**
+ * @swagger
+ * /api/coffee/{number}:
+ *   post:
+ *     tags:
+ *       - CoffeeAPI
+ *     summary: Get data from coffee smart plug
+ *     parameters:
+ *       - name: number
+ *         in: path
+ *         description: Number parameter for coffee smart plug
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       '200':
+ *         description: OK. Returns data from the coffee smart plug.
+ */
 router.post('/:number', (req, res) => {
   const { number } = req.params;
   console.log("numero caffe inseriti", number);
@@ -42,15 +58,23 @@ router.post('/:number', (req, res) => {
 
   res.send('Dati del caffè registrati con successo!');
 });
-
-// Endpoint per ottenere i dati della macchinetta del caffè e conteggio dei record con valore 1 e 2
+/**
+ * @swagger
+ * /api/coffee/data:
+ *   get:
+ *     tags:
+ *       - CoffeeAPI
+ *     summary: Get data from coffee smart plug
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.get('/data', (req, res) => {
   const coffes = firstMachine.getAllData();
   firstMachine
     .getDataAndCount()
     .then((data) => {
       const jsonData = {
-        id: 100,
         coffes: coffes,
         data: data
       };

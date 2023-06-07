@@ -119,6 +119,7 @@ class CoffeeManager {
     const accensioni = this.getAccensioni();
     const coffeeCount = this.countCoffes();
     const jsonData = {
+      id :100,
       accensioni: accensioni,
       coffeeCount: coffeeCount-accensioni*2
     };

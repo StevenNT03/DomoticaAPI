@@ -6,7 +6,18 @@ const createAlpha = require('../../obj/alphaManger');
 const net = require('net');
 
 const alpha = createAlpha('192.168.1.25', 502);
-//Endpoint per ricevere i dati attualmente salvati dei registri del dispositivo Alpha
+/**
+ * @swagger
+ * /api/alpha/data:
+ *   get:
+ *     tags:
+ *       - AlphaAPI
+ *     summary: Get alpha data
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
+
 router.get('/data', (req, res) => {
   const values = alpha.getValues();
   const data = {
