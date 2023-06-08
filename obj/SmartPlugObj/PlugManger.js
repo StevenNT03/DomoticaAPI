@@ -17,7 +17,6 @@ class PlugManager extends EventEmitter {
     super();
     this.deviceId = deviceId;
     this.started = false;
-    
 
     // Prepara i dati per richiedere un token di accesso
     this.postData = JSON.stringify({
@@ -93,11 +92,14 @@ class PlugManager extends EventEmitter {
     // Gestisci l'evento "status" che contiene i dati del dispositivo
     eventSource.on('status', (event) => {
       const plugdata = JSON.parse(event.data).data;
+    
   
       const jsonsemnd = {
         "deviceId": this.deviceId,
         plugdata
       }
+
+    
   
       // Emetti l'evento "message" con i dati del dispositivo
       this.emit('message', jsonsemnd);

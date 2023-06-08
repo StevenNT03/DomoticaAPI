@@ -11,7 +11,7 @@ const alphaAPIRoutes = require('./Routes/AlphaAPI/Alpha');
 const shellyAPIRoutes = require('./Routes/ShellyAPI/Shelly');
 const smartPlugAPIRoutes = require('./Routes/SmartPlugAPI/Plug');
 const CoffeAPIRoutes = require('./Routes/CoffeeAPI/Coffe');
-
+const AirApiRoutes = require('./Routes/AirAPI/Air');
 // Middleware CORS
 app.use(cors());
 
@@ -20,6 +20,7 @@ app.use('/api/alpha', alphaAPIRoutes);
 app.use('/api/shelly', shellyAPIRoutes);
 app.use('/api/tplink', smartPlugAPIRoutes);
 app.use('/api/coffee', CoffeAPIRoutes);
+app.use('/api/air', AirApiRoutes);
 
 
 // Configurazione Swagger
