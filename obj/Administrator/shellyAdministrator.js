@@ -1,5 +1,18 @@
 const axios = require('axios');
-const createShelly = require('../shellyManager')
+const createShelly = require('../shellyManager');
+const { InfluxDB } = require('@influxdata/influxdb-client');
+const { Point } = require('@influxdata/influxdb-client');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const ipAddress = process.env.INFLUX_IP_ADDRESS;
+const token = process.env.INFLUX_TOKEN;
+const org = process.env.INFLUX_ORG;
+const bucket = process.env.INFLUX_SHELLY_BUCKET;
+const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
+const writeApi = client.getWriteApi(org, bucket);
+
+
 function createAdministrator() {
   const shelly1 = createShelly('192.168.1.21'); 
   const shelly2 = createShelly('192.168.1.22');
@@ -204,10 +217,10 @@ function createAdministrator() {
   };
 
   setInterval(() => {
-    for (let relayId = 0; relayId < 10; relayId++) {
+    for (let relayId = 0; relayId < 8; relayId++) {
       storeRelayStatus(relayId);
     }
-  }, 5 * 60 * 1000); // Run every 5 minutes (5 * 60 * 1000 milliseconds)
+  }, 5*60*1000); // Run every 5 minutes (5 * 60 * 1000 milliseconds)
 
   return shellyAdministrator;
 }
