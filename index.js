@@ -38,6 +38,7 @@ const swaggerOptions = {
     './Routes/ShellyAPI/Shelly.js',
     './Routes/SmartPlugAPI/Plug.js',
     './Routes/CoffeeAPI/Coffe.js',
+    './Routes/AirAPI/Air.js',
     './index.js', // Aggiungi il percorso del tuo file app.js
   ],
   apisExclude: ['./node_modules/**'], // Escludi le cartelle di dipendenze dalla documentazione

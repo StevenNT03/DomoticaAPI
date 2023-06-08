@@ -175,7 +175,7 @@ router.post('/relays/:relayId/on', (req, res) => {
  * /api/shelly/{relayID}/data:
  *   get:
  *     tags:
- *       - LightsAPI
+ *       - ShellyAPI
  *     summary: Get data for a specific relay
  *     parameters:
  *       - name: relayID
