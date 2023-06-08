@@ -1,61 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const { InfluxDB } = require('@influxdata/influxdb-client');
+const createAdministrator = require('../../obj/Administrator/shellyAdministrator');
+const dotenv = require('dotenv');
+dotenv.config();
 
-const createShelly = require('../../obj/shellyManager'); // Importa la funzione createShelly
-
-// Crea un'istanza di ShellyAPI con gli indirizzi IP desiderati
-const shelly1 = createShelly('192.168.1.21'); 
-const shelly2 = createShelly('192.168.1.22');
-const shelly3 = createShelly('192.168.1.23');
-
-let room;
-
-// Funzione ausiliaria per ottenere l'istanza corretta di Shelly in base all'ID del relè
-function getShellyInstance(relayId) {
-  let shelly;
-  
-  if (relayId >= 0 && relayId <= 3) {
-    shelly = shelly1;
-    
-    if(relayId == 0){
-      room = "Ufficio Andrea";
-    } else if(relayId == 1){
-      room = "Sala Riunioni";
-    } else if(relayId == 2){
-      room = "Ufficio Flavio";
-    } else if(relayId == 3){
-      room = "Laboratorio";
-    }
-    
-    relayId %= 4;
-  } else if (relayId >= 4 && relayId <= 7) {
-    shelly = shelly2;
-    
-    if(relayId == 4){
-      room = "Cucina-Ripostiglio";
-    } else if(relayId == 5){
-      room = "Ingresso";
-    } else if(relayId == 6){
-      room = "BreakTime Space";
-    } else if(relayId == 7){
-      room = "Open Space";
-    }
-    
-    relayId = (relayId - 4) % 4;
-  } else if (relayId >= 8 && relayId <= 9) {
-    shelly = shelly3;
-    
-    if(relayId == 8){
-      room = "Punto luce non attivo";
-    } else if(relayId == 9){
-      room = "----";
-    }
-    
-    relayId = (relayId - 8) % 2;
-  }
-  
-  return { shelly, relayId, room };
-}
+const ipAddress = process.env.INFLUX_IP_ADDRESS;
+const token = process.env.INFLUX_TOKEN;
+const org = process.env.INFLUX_ORG;
+const bucket = process.env.INFLUX_SHELLY_BUCKET;
+const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
+const shellyAdmin = createAdministrator();
 
 /**
  * @swagger
@@ -69,20 +24,15 @@ function getShellyInstance(relayId) {
  *         description: OK
  */
 router.post('/relays/all/off', (req, res) => {
-  const promises = [];
-
-  promises.push(shelly1.turnOffAllRelays());
-  promises.push(shelly2.turnOffAllRelays());
-  promises.push(shelly3.turnOffAllRelays());
-
-  Promise.all(promises)
+  shellyAdmin.AllOff()
     .then(results => {
-      res.json({ results });
+      res.json(results);
     })
     .catch(error => {
-      res.status(500).json({ error: 'Errore durante lo spegnimento dei relè.' });
+      res.status(500).json({ error: error.message });
     });
 });
+
 /**
  * @swagger
  * /api/shelly/relays/all/status:
@@ -95,67 +45,43 @@ router.post('/relays/all/off', (req, res) => {
  *         description: OK
  */
 router.get('/relays/all/status', (req, res) => {
-  const promises = [];
-  const statesWithRoom = [];
-
-  for (let relayId = 0; relayId < 10; relayId++) {
-    const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
-
-    if (shelly) {
-      promises.push(
-        shelly.getRelayStatus(shellyRelayId)
-          .then(state => {
-            statesWithRoom.push({ state: { ...state, id: relayId }, room });
-          })
-      );
-    }
-  }
-
-  Promise.all(promises)
-    .then(() => {
+  shellyAdmin.getAllStatus()
+    .then(statesWithRoom => {
       res.json(statesWithRoom);
     })
     .catch(error => {
-      res.status(500).json({ error: 'Impossibile ottenere lo stato dei relè.' });
+      res.status(500).json({ error: error.message });
     });
 });
 
-/** 
-* @swagger
-* /api/shelly/relays/{id}/status:
-*   get:
-*     tags:
-*       - ShellyAPI
-*     summary: Get relay full info
-*     parameters:
-*       - name: id
-*         in: path
-*         description: ID of the relay
-*         required: true
-*         schema:
-*           type: string
-*     responses:
-*       '200':
-*         description: OK
-*/
+/**
+ * @swagger
+ * /api/shelly/relays/{id}/status:
+ *   get:
+ *     tags:
+ *       - ShellyAPI
+ *     summary: Get relay full info
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID of the relay
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
 router.get('/relays/:relayId/status', (req, res) => {
-  const relayId = parseInt(req.params.relayId);
-  const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
-
-  if (shelly) {
-    shelly.getRelayStatus(shellyRelayId)
-      .then(state => {
-        res.json({ state: { ...state, id: relayId }, room });
-      })
-      .catch(error => {
-        res.status(500).json({ error: 'Impossibile ottenere lo stato del relè.' });
-      });
-  } else {
-    res.status(404).json({ error: 'Shelly non trovato per l\'ID specificato.' });
-  }
+  const relayId = req.params.relayId;
+  shellyAdmin.getARelayStatus(relayId)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(error => {
+      res.status(500).json({ error: error.message });
+    });
 });
-
-
 
 /**
  * @swagger
@@ -176,20 +102,14 @@ router.get('/relays/:relayId/status', (req, res) => {
  *         description: OK
  */
 router.post('/relays/:relayId/toggle', (req, res) => {
-  const relayId = parseInt(req.params.relayId);
-  const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
-
-  if (shelly) {
-    shelly.toggleRelay(shellyRelayId, relayId)
-    .then(state => {
-      res.json({ state: { ...state, relayId: relayId}, room });
-      })
-      .catch(error => {
-        res.status(500).json({ error: 'Impossibile attivare o disattivare il relè.' });
-      });
-  } else {
-    res.status(404).json({ error: 'Shelly non trovato per l\'ID specificato.' });
-  }
+  const relayId = req.params.relayId;
+  shellyAdmin.SwitchStatus(relayId)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(error => {
+      res.status(500).json({ error: error.message });
+    });
 });
 
 /**
@@ -211,23 +131,15 @@ router.post('/relays/:relayId/toggle', (req, res) => {
  *         description: OK
  */
 router.post('/relays/:relayId/off', (req, res) => {
-  const relayId = parseInt(req.params.relayId);
-  const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
-
-  if (shelly) {
-    shelly.setRelayOff(shellyRelayId, relayId)
-    .then(state => {
-      res.json({ state: { ...state, relayId: relayId}, room });
-      })
-      .catch(error => {
-        res.status(500).json({ error: 'Impossibile spegnere il relè.' });
-      });
-  } else {
-    res.status(404).json({ error: 'Shelly non trovato per l\'ID specificato.' });
-  }
+  const relayId = req.params.relayId;
+  shellyAdmin.setARelayOff(relayId)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(error => {
+      res.status(500).json({ error: error.message });
+    });
 });
-
-
 
 /**
  * @swagger
@@ -248,22 +160,85 @@ router.post('/relays/:relayId/off', (req, res) => {
  *         description: OK
  */
 router.post('/relays/:relayId/on', (req, res) => {
-  const relayId = parseInt(req.params.relayId);
-  const { shelly, relayId: shellyRelayId, room } = getShellyInstance(relayId);
-
-  if (shelly) {
-    shelly.setRelayOn(shellyRelayId, relayId)
-    .then(state => {
-      res.json({ state: { ...state, relayId: relayId }, room });
-      })
-      .catch(error => {
-        res.status(500).json({ error: 'Impossibile accendere il relè.' });
-      });
-  } else {
-    res.status(404).json({ error: 'Shelly non trovato per l\'ID specificato.' });
-  }
+  const relayId = req.params.relayId;
+  shellyAdmin.setARelayOn(relayId)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(error => {
+      res.status(500).json({ error: error.message });
+    });
 });
 
+/**
+ * @swagger
+ * /api/shelly/{relayID}/data:
+ *   get:
+ *     tags:
+ *       - LightsAPI
+ *     summary: Get data for a specific relay
+ *     parameters:
+ *       - name: relayID
+ *         in: path
+ *         description: ID of the relay
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: start
+ *         in: query
+ *         description: Start timestamp
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: end
+ *         in: query
+ *         description: End timestamp
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ *       '400':
+ *         description: Missing values start or end
+ *       '500':
+ *         description: Error executing the query
+ */
+router.get('/:relayID/data', async (req, res) => {
+  const { relayID } = req.params; // Get id from params
+  const { start, end } = req.query; // Get start and end from query
 
+  if (start && end) {
+    try {
+      // Convert start and end to ISO timestamps
+      const startTimestamp = new Date(start).toISOString();
+      const endTimestamp = new Date(end).toISOString();
+
+      // Build the Flux query
+      const fluxQuery = `
+        from(bucket: "${bucket}")
+          |> range(start: ${startTimestamp}, stop: ${endTimestamp})
+          |> filter(fn: (r) => r["_measurement"] == "Lights")
+          |> filter(fn: (r) => r["lightID"] == "${relayID}")
+      `;
+
+      // Execute the Flux query
+      const result = await client.getQueryApi(org).collectRows(fluxQuery);
+
+      const modifiedResult = result.map(data => ({
+        time: data._time,
+        watt: data._value,
+        id: data.lightID
+      }));
+
+      res.json(modifiedResult);
+    } catch (error) {
+      console.error('Error executing query:', error);
+      res.status(500).json({ error: 'Error executing query' });
+    }
+  } else {
+    res.status(400).json({ error: 'Missing values start or end' });
+  }
+});
 
 module.exports = router;

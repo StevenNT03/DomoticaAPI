@@ -1,4 +1,13 @@
 const axios = require('axios');
+const { InfluxDB } = require('@influxdata/influxdb-client');
+const dotenv = require('dotenv');
+dotenv.config();
+const ipAddress = process.env.INFLUX_IP_ADDRESS;
+const token = process.env.INFLUX_TOKEN;
+const org = process.env.INFLUX_ORG;
+const bucket = process.env.INFLUX_SHELLY_BUCKET;
+const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
+const writeApi = client.getWriteApi(org, bucket);
 
 function createShelly(ipAddress) {
   const shellyUrl = `http://${ipAddress}/relay/`;
@@ -8,7 +17,7 @@ function createShelly(ipAddress) {
   function getShellyUrl(relayId) {
     return shellyUrl + relayId;
   }
-
+  
   const shelly = {
     // Ottiene lo stato di un relè specifico
     getRelayState(relayId) {
@@ -27,7 +36,7 @@ function createShelly(ipAddress) {
           throw error;
         });
     },
-    
+
     // Ottiene lo stato dettagliato di un relè specifico
     getRelayStatus(relayId) {
       const url = statusUrl + relayId;
@@ -63,12 +72,12 @@ function createShelly(ipAddress) {
     turnOffAllRelays() {
       const url = `http://${ipAddress}/rpc/Script.Start`;
       const scriptId = 1;
-    
+
       const requestData = {
         id: scriptId,
         enabled: true
       };
-    
+
       return axios.post(url, requestData)
         .then(() => {
           return {
@@ -119,3 +128,4 @@ function createShelly(ipAddress) {
 }
 
 module.exports = createShelly;
+
