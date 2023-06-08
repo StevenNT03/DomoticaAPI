@@ -11,50 +11,62 @@ const bucket = process.env.INFLUX_BUCKET;
 const ipAddress = process.env.INFLUX_IP_ADDRESS;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
-
 class AirManager {
-  
   constructor(deviceId) {
     this.plugManager = new PlugManager(deviceId);
     this.receivedData = null;
+    this.previousWattValue = null;
+
+    this.isNewCommunication = false;
     console.log("air in comunicazione");
   }
 
   start() {
-    let previousWattValue = null; // Valore precedente di data.watt
     let isFirstMinute = true; // Flag per il primo minuto
     let previusdata = null;
+
     this.plugManager.on('message', (data) => {
+      this.isNewCommunication = true;
       this.receivedData = JSON.parse(data.plugdata);
       console.log(this.receivedData);
 
       const currentWattValue = this.receivedData.watt;
+  
 
-      if (!isFirstMinute && (currentWattValue > (previousWattValue * 1.2) || currentWattValue < (previousWattValue * 0.8))) {
-        this.writeDataToInfluxDB(data); // Scrivi su InfluxDB se l'aumento o il decremento è significativo
-        console.log('Data received:', data);
+      if (!isFirstMinute) {
+        // Verifica se è presente una nuova comunicazione
+        if (
+          (currentWattValue > previousWattValue * 1.2 ||
+            currentWattValue < previousWattValue * 0.8)
+        ) {
+          this.writeDataToInfluxDB(this.receivedData);
+          console.log('Data received:', this.receivedData);
+        }
       }
 
-      // Assegna il valore corrente solo dopo il primo minuto
+      // Assegna i valori correnti solo dopo il primo minuto
       if (!isFirstMinute) {
-        previousWattValue = currentWattValue;
+        this.previousWattValue = currentWattValue;
         previusdata = data;
+       
       } else {
         isFirstMinute = false;
       }
     });
 
-    // Scrivi su InfluxDB ogni minuto
+    // Controlla ogni 10 secondi se è stata ricevuta una nuova comunicazione e scrive su InfluxDB se necessario
     setInterval(() => {
-      if (previousWattValue !== null) {
-        this.writeDataToInfluxDB(previusdata);
-        console.log('Data received:', previusdata);
+      if (this.isNewCommunication) {
+      
+          this.writeDataToInfluxDB(previusdata);
+          console.log('Data received:', previusdata);
+          this.isNewCommunication = false;
+        
       }
-    }, 60000);
+    }, 10000);
 
     this.connectToPlugManager();
   }
-
   connectToPlugManager() {
     this.plugManager.start();
 
