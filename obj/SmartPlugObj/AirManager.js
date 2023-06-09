@@ -36,8 +36,8 @@ class AirManager {
       if (!isFirstMinute) {
         // Verifica se è presente una nuova comunicazione
         if (
-          (currentWattValue > previousWattValue * 1.2 ||
-            currentWattValue < previousWattValue * 0.8)
+          Math.abs((currentWattValue - this.previousWattValue) / this.previousWattValue) >= 0.2
+
         ) {
           this.writeDataToInfluxDB(this.receivedData);
           console.log('Data received:', this.receivedData);
@@ -63,7 +63,7 @@ class AirManager {
           this.isNewCommunication = false;
         
       }
-    }, 10000);
+    }, 60000);
 
     this.connectToPlugManager();
   }
