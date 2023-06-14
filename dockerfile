@@ -23,5 +23,8 @@ ENV INFLUX_BUCKET=CoffeData
 ENV INFLUX_IP_ADDRESS=192.168.1.6
 ENV INFLUX_SHELLY_BUCKET=ShellyData
 
+# Imposta il fuso orario su Europe/Rome
+ENV TZ=Europe/Rome
+
 # Avvia l'applicazione
 CMD [ "npm", "start" ]

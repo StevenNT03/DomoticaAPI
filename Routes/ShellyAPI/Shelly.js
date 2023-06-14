@@ -3,6 +3,7 @@ const router = express.Router();
 const { InfluxDB } = require('@influxdata/influxdb-client');
 const createAdministrator = require('../../obj/Administrator/shellyAdministrator');
 const dotenv = require('dotenv');
+const moment = require('moment-timezone');
 dotenv.config();
 
 const ipAddress = process.env.INFLUX_IP_ADDRESS;
@@ -226,7 +227,7 @@ router.get('/:relayID/data', async (req, res) => {
       const result = await client.getQueryApi(org).collectRows(fluxQuery);
 
       const modifiedResult = result.map(data => ({
-        time: data._time,
+        time: moment(data._time).tz('Europe/Rome').format('YYYY-MM-DD HH:mm:ss'),
         watt: data._value,
         id: data.lightID
       }));
