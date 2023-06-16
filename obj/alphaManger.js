@@ -66,7 +66,7 @@ console.log(result);
     });
     return {
       timestamp,
-      avarage: row._value,
+      average: row._value,
     };
   });
 
