@@ -24,6 +24,7 @@ function createShelly(ipAddress) {
       const url = getShellyUrl(relayId);
       return axios.get(url)
         .then(response => {
+          
           const currentState = response.data.ison;
           return {
             relayId: relayId,
@@ -41,7 +42,7 @@ function createShelly(ipAddress) {
     getRelayStatus(relayId) {
       const url = statusUrl + relayId;
       return axios.get(url)
-        .then(response => response.data)
+        .then(response => { return response.data})
         .catch(error => {
           console.log(`Impossibile ottenere lo stato del relè ${relayId} del dispositivo Shelly.`);
           throw error;

@@ -12,6 +12,9 @@ const bucket = process.env.INFLUX_SHELLY_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 function createAdministrator() {
   const shelly1 = createShelly('192.168.1.21'); 
@@ -26,13 +29,13 @@ function createAdministrator() {
       shelly = shelly1;
       
       if (relayId === 0) {
-        room = "Ufficio Andrea";
+        room = "Andrea's Office";
       } else if (relayId === 1) {
-        room = "Sala Riunioni";
+        room = "Meeting Room";
       } else if (relayId === 2) {
-        room = "Ufficio Flavio";
+        room = "Flavio's Office";
       } else if (relayId === 3) {
-        room = "Laboratorio";
+        room = "Laboratory";
       }
       
       relayId %= 4;
@@ -40,9 +43,9 @@ function createAdministrator() {
       shelly = shelly2;
       
       if (relayId === 4) {
-        room = "Cucina-Ripostiglio";
+        room = "Kitchen";
       } else if (relayId === 5) {
-        room = "Ingresso";
+        room = "Entrance";
       } else if (relayId === 6) {
         room = "BreakTime Space";
       } else if (relayId === 7) {
@@ -95,43 +98,35 @@ function createAdministrator() {
 
   const shellyAdministrator = {
    
-     getAllStatus() {
+   async getAllStatus() {
       const promises = [];
       const statesWithRoom = [];
+
+      try{
     
       for (let k = 0; k < 10; k++) {
         const { shelly, relayId: shellyRelayId, room } = getShellyInstance(k);
-        //console.log(shelly, shellyRelayId, room , relayId)
-    
+        
+        
         if (shelly) {
-          promises.push(
-            shelly.getRelayStatus(shellyRelayId)
-              .then(state => {
-                statesWithRoom.push( { state: { ...state, id: k }, room });
-                //console.log(statesWithRoom)
-              })
-          );
-        } else {
-          const errorMessage = `Shelly instance not found for relayId ${relayId}`;
-          console.error(errorMessage);
+              
+                console.log(shellyRelayId, Date())
+                
+                 const state = await shelly.getRelayStatus(shellyRelayId)
+                 statesWithRoom.push({ state: { ...state, id: k }, room });
+                await sleep(1000);
+            }
         }
+      }catch(error){
+        console.log(error);
       }
-    // console.log(promises)
-      return Promise.all(promises)
-        .then(() => {
-          return {
+    
+     
+      
+      return {
             data: statesWithRoom,
           };
-        })
-        .catch(error => {
-          const response = {
-            error: 'Impossibile ottenere lo stato dei relè.',
-          };
-          return response;
-        });
-
-       p;
-    },
+    },    
       
  
 

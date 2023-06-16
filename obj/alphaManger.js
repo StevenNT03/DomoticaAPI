@@ -1,5 +1,16 @@
 const Modbus = require('jsmodbus');
 const net = require('net');
+const { Point } = require('@influxdata/influxdb-client');
+const { InfluxDB } = require('@influxdata/influxdb-client');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const ipAddress = process.env.INFLUX_IP_ADDRESS;
+const token = process.env.INFLUX_TOKEN;
+const org = process.env.INFLUX_ORG;
+const bucket = process.env.INFLUX_ALPHA_BUCKET;
+const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
+const writeApi = client.getWriteApi(org, bucket);
 
 const registerArray = {
   '2': 1, // potenza usata attuale [W]
@@ -11,12 +22,62 @@ const registerArray = {
 };
 
 let registerValues;
+let lastInstantValue = null;
+let lastAverageValue = null;
+
+async function queryInstantPowerValues(start, end) {
+  const startTimestamp = new Date(start).toISOString();
+  const endTimestamp = new Date(end).toISOString();
+
+  const query = `from(bucket:"${bucket}")
+    |> range(start: ${startTimestamp}, stop: ${endTimestamp})
+    |> filter(fn: (r) => r._measurement == "instant")`;
+
+  const result = await client.getQueryApi(org).collectRows(query);
+
+  const powerValues = result.map((row) => {
+    const timestamp = new Date(row._time).toLocaleString("en-US", {
+      timeZone: "Europe/Rome", // Imposta il fuso orario a GMT (+2)
+      hour12: false, // Formato 24 ore
+    });
+    return {
+      timestamp,
+      power: row._value, // Verifica il nome corretto della colonna
+    };
+  });
+
+  return powerValues;
+}
+
+async function queryAveragePowerValues(start, end) {
+  const startTimestamp = new Date(start).toISOString();
+  const endTimestamp = new Date(end).toISOString();
+
+  const query = `from(bucket:"${bucket}")
+    |> range(start: ${startTimestamp}, stop: ${endTimestamp})
+    |> filter(fn: (r) => r._measurement == "average")`;
+
+  const result = await client.getQueryApi(org).collectRows(query);
+console.log(result);
+  const powerValues = result.map((row) => {
+    const timestamp = new Date(row._time).toLocaleString("en-US", {
+      timeZone: "Europe/Rome", // Imposta il fuso orario a GMT (+2)
+      hour12: false, // Formato 24 ore
+    });
+    return {
+      timestamp,
+      avarage: row._value,
+    };
+  });
+
+  return powerValues;
+}
+
 
 function createAlpha(ip, port) {
   let client = null;
 
   function createConnection() {
-    // Crea una connessione TCP con il server Modbus
     const socket = new net.Socket();
     client = new Modbus.client.TCP(socket);
 
@@ -59,31 +120,53 @@ function createAlpha(ip, port) {
     });
   }
 
-
   function updateRegisters() {
-    // Aggiorna i valori dei registri
     readRegisters(registerArray)
       .then((values) => {
         registerValues = values;
-        console.log("registri aggiornati", registerValues);
+        console.log("Registri aggiornati", registerValues);
+
+        const [powerValue, averagePowerValue] = registerValues;
+
+        const instantVariation = lastInstantValue ? (powerValue - lastInstantValue) / lastInstantValue * 100 : 0;
+        const now = new Date();
+
+        if (!lastInstantValue || instantVariation >= 20 || instantVariation <= -20 || (now.getMinutes() % 5 === 0 && now.getSeconds() === 0)) {
+          const instantPoint = new Point('instant')
+            .floatField('power', powerValue)
+            .timestamp(now);
+        
+          writeApi.writePoint(instantPoint);
+          lastInstantValue = powerValue;
+          console.log('Valore scritto nel punto istantanea:', powerValue);
+        }
+        
+        if (!lastAverageValue || (now.getMinutes() % 15 === 0 && now.getSeconds() === 0)) {
+          const averagePoint = new Point('average')
+            .floatField('power', averagePowerValue)
+            .timestamp(now);
+        
+          writeApi.writePoint(averagePoint);
+          lastAverageValue = averagePowerValue;
+          console.log('Valore scritto nel punto media:', averagePowerValue);
+        }
       })
       .catch((err) => {
         console.error('Errore nell\'aggiornamento dei registri:', err);
       });
   }
-  
-  createConnection();
 
-  // Aggiorna periodicamente i valori dei registri ogni secondo
+  createConnection();
   setInterval(updateRegisters, 1000);
 
   function getValues() {
-    // Restituisce i valori dei registri
     return registerValues;
   }
 
   return {
-    getValues
+    getValues,
+    queryInstantPowerValues,
+    queryAveragePowerValues
   };
 }
 
