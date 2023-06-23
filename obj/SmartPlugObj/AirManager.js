@@ -1,7 +1,8 @@
+const PlugManager = require('../../obj/SmartPlugObj/PlugManger');
 const { Point } = require('@influxdata/influxdb-client');
 const { InfluxDB } = require('@influxdata/influxdb-client');
 const dotenv = require('dotenv');
-const PlugManager = require('../../obj/SmartPlugObj/PlugManger');
+const moment = require('moment-timezone');
 dotenv.config(); // Carica le variabili d'ambiente dal file .env
 
 // Configurazione del client InfluxDB
@@ -11,16 +12,38 @@ const bucket = process.env.INFLUX_BUCKET;
 const ipAddress = process.env.INFLUX_IP_ADDRESS;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
+
 class AirManager {
   constructor(deviceId) {
-    this.plugManager = new PlugManager(deviceId);
+    this.deviceId = deviceId;
+    this.plugManager = new PlugManager(this.deviceId);
     this.receivedData = null;
     this.previousWattValue = null;
-
     this.isNewCommunication = false;
     console.log("air in comunicazione");
   }
 
+  async querySmartPlugData(start, end) {
+    const startTimestamp = new Date(start).toISOString();
+    const endTimestamp = new Date(end).toISOString();
+  
+    const query = `from(bucket:"${bucket}")
+      |> range(start: ${startTimestamp}, stop: ${endTimestamp})
+      |> filter(fn: (r) => r._field == "watt" and r._measurement == "SmartPlug" and r.deviceid == "${this.deviceId}")`;
+  
+    const result = await client.getQueryApi(org).collectRows(query);
+  
+    const powerValues = result.map((row) => {
+      const timestamp = moment(row._time).tz('Europe/Rome').format('YYYY-MM-DD HH:mm:ss');
+      return {
+        timestamp,
+        watt: row._value,
+      };
+    });
+  
+    return powerValues;
+  }
+  
   start() {
     let isFirstMinute = true; // Flag per il primo minuto
     let previusdata = null;
@@ -31,13 +54,11 @@ class AirManager {
       console.log(this.receivedData);
 
       const currentWattValue = this.receivedData.watt;
-  
 
       if (!isFirstMinute) {
         // Verifica se è presente una nuova comunicazione
         if (
           Math.abs((currentWattValue - this.previousWattValue) / this.previousWattValue) >= 0.2
-
         ) {
           this.writeDataToInfluxDB(this.receivedData);
           console.log('Data received:', this.receivedData);
@@ -48,7 +69,6 @@ class AirManager {
       if (!isFirstMinute) {
         this.previousWattValue = currentWattValue;
         previusdata = data;
-       
       } else {
         isFirstMinute = false;
       }
@@ -57,16 +77,15 @@ class AirManager {
     // Controlla ogni 10 secondi se è stata ricevuta una nuova comunicazione e scrive su InfluxDB se necessario
     setInterval(() => {
       if (this.isNewCommunication) {
-      
-          this.writeDataToInfluxDB(previusdata);
-          console.log('Data received:', previusdata);
-          this.isNewCommunication = false;
-        
+        this.writeDataToInfluxDB(previusdata);
+        console.log('Data received:', previusdata);
+        this.isNewCommunication = false;
       }
     }, 60000);
 
     this.connectToPlugManager();
   }
+
   connectToPlugManager() {
     this.plugManager.start();
 
@@ -102,6 +121,7 @@ class AirManager {
         });
     }
   }
+
   getData() {
     const timestamp = new Date().toISOString();
     const data = {
@@ -110,9 +130,6 @@ class AirManager {
     };
     return data;
   }
-  
-  
-
 }
 
 module.exports = AirManager;
