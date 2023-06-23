@@ -114,7 +114,7 @@ function createAdministrator() {
                 
                  const state = await shelly.getRelayStatus(shellyRelayId)
                  statesWithRoom.push({ state: { ...state, id: k }, room });
-                await sleep(1000);
+                await sleep(200);
             }
         }
       }catch(error){

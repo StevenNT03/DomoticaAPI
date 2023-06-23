@@ -3,6 +3,7 @@ const net = require('net');
 const { Point } = require('@influxdata/influxdb-client');
 const { InfluxDB } = require('@influxdata/influxdb-client');
 const dotenv = require('dotenv');
+const moment = require('moment-timezone');
 dotenv.config();
 
 const ipAddress = process.env.INFLUX_IP_ADDRESS;
@@ -36,10 +37,7 @@ async function queryInstantPowerValues(start, end) {
   const result = await client.getQueryApi(org).collectRows(query);
 
   const powerValues = result.map((row) => {
-    const timestamp = new Date(row._time).toLocaleString("en-US", {
-      timeZone: "Europe/Rome", // Imposta il fuso orario a GMT (+2)
-      hour12: false, // Formato 24 ore
-    });
+    const timestamp = moment(row._time).tz('Europe/Rome').format('YYYY-MM-DD HH:mm:ss');
     return {
       timestamp,
       power: row._value, // Verifica il nome corretto della colonna
@@ -58,12 +56,9 @@ async function queryAveragePowerValues(start, end) {
     |> filter(fn: (r) => r._measurement == "average")`;
 
   const result = await client.getQueryApi(org).collectRows(query);
-console.log(result);
   const powerValues = result.map((row) => {
-    const timestamp = new Date(row._time).toLocaleString("en-US", {
-      timeZone: "Europe/Rome", // Imposta il fuso orario a GMT (+2)
-      hour12: false, // Formato 24 ore
-    });
+    const timestamp = moment(row._time).tz('Europe/Rome').format('YYYY-MM-DD HH:mm:ss');
+    console.log(timestamp);
     return {
       timestamp,
       average: row._value,
@@ -110,7 +105,6 @@ function createAlpha(ip, port) {
 
       Promise.all(promises)
         .then((results) => {
-          const values = results.map((result) => result.response._body._valuesAsArray[0]);
           resolve(results.map((result) => parseInt(result.response._body._valuesAsBuffer.toString('hex'), 16)));
         })
         .catch((err) => {
