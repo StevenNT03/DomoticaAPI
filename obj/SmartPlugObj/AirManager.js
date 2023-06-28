@@ -50,8 +50,9 @@ class AirManager {
 
     this.plugManager.on('message', (data) => {
       this.isNewCommunication = true;
-      this.receivedData = JSON.parse(data.plugdata);
-      console.log(this.receivedData);
+    
+      this.receivedData = data.plugdata;
+      //console.log(this.receivedData);
 
       const currentWattValue = this.receivedData.watt;
 
@@ -61,7 +62,7 @@ class AirManager {
           Math.abs((currentWattValue - this.previousWattValue) / this.previousWattValue) >= 0.2
         ) {
           this.writeDataToInfluxDB(this.receivedData);
-          console.log('Data received:', this.receivedData);
+          //console.log('Data received:', this.receivedData);
         }
       }
 
@@ -78,7 +79,7 @@ class AirManager {
     setInterval(() => {
       if (this.isNewCommunication) {
         this.writeDataToInfluxDB(previusdata);
-        console.log('Data received:', previusdata);
+       // console.log('Data received:', previusdata);
         this.isNewCommunication = false;
       }
     }, 60000);
@@ -114,7 +115,7 @@ class AirManager {
       writeApi
         .flush()
         .then(() => {
-          console.log('Data written to InfluxDB');
+         // console.log('Data written to InfluxDB');
         })
         .catch((error) => {
           console.error('Error writing data to InfluxDB:', error);

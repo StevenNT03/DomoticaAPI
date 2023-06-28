@@ -91,12 +91,13 @@ class PlugManager extends EventEmitter {
   
     // Gestisci l'evento "status" che contiene i dati del dispositivo
     eventSource.on('status', (event) => {
-      const plugdata = JSON.parse(event.data).data;
-    
+      const plugdata = JSON.parse(event.data);
   
       const jsonsemnd = {
         "deviceId": this.deviceId,
-        plugdata
+        "plugdata": JSON.parse(plugdata.data),
+        "timestamp" : new Date(plugdata.published_at).getTime()
+
       }
 
     

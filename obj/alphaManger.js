@@ -58,7 +58,7 @@ async function queryAveragePowerValues(start, end) {
   const result = await client.getQueryApi(org).collectRows(query);
   const powerValues = result.map((row) => {
     const timestamp = moment(row._time).tz('Europe/Rome').format('YYYY-MM-DD HH:mm:ss');
-    console.log(timestamp);
+    //console.log(timestamp);
     return {
       timestamp,
       average: row._value,
@@ -118,7 +118,7 @@ function createAlpha(ip, port) {
     readRegisters(registerArray)
       .then((values) => {
         registerValues = values;
-        console.log("Registri aggiornati", registerValues);
+     //   console.log("Registri aggiornati", registerValues);
 
         const [powerValue, averagePowerValue] = registerValues;
 
