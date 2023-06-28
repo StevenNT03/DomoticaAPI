@@ -11,68 +11,42 @@ const bucket = process.env.INFLUX_BUCKET;
 const ipAddress = process.env.INFLUX_IP_ADDRESS;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
+const recognize = require("../SmartPlugObj/coffeRecognizer/recognizer");
 
 class CoffeeManager {
   constructor(deviceId) {
     this.plugManager = new PlugManager(deviceId);
-    this.receivedData = null;
     this.accensioni = 0;
     this.coffeeCount = 0;
+    this.communicationArray = {v: [], t:[]};
+    this.timeout = null;
+    this.receivedData=null;
   }
 
   start() {
-    let currentDate = new Date().getDate(); // Data corrente
-    let lastPeakWatt = 0; // Ultimo picco di watt
-    let lastPeakTimestamp = 0; // Timestamp dell'ultimo picco di watt
     let i = 0;
+    
     this.plugManager.on('message', (data) => {
       console.log('Data received:', data);
-      this.receivedData = JSON.parse(data.plugdata);
-      console.log(this.receivedData);
-      const currentTimestamp = Date.now();
-  
-      // Verifica se la data è cambiata
-      if (new Date().getDate() !== currentDate) {
-        console.log("nuovo giorno")
-        currentDate = new Date().getDate();
-        this.coffeeCount = 0;
-        this.accensioni = 0;
+      this.receivedData= data.plugdata;
+         
+      // Aggiungi i nuovi dati al singolo oggetto nell'array
+      if(data.plugdata.watt>=20){
+      this.communicationArray.v.push(data.plugdata.watt);
+      this.communicationArray.t.push(data.timestamp);
       }
-  
-      // Verifica se è presente un picco di watt
-      if (this.receivedData.watt > 1000) {
+      let count=9;
+      // Resetta il timeout a 7 secondi ogni volta che viene ricevuta una comunicazione
+      clearTimeout(this.timeout);
+      this.timeout = setTimeout(() => {
+        if(this.communicationArray.v.length>0){
+        count = recognize(this.communicationArray);}
+        if(count!=9){
+        this.writeCountToInfluxDB(count);}
+        this.communicationArray.v = [];
+        this.communicationArray.t = [];
 
-        // Verifica se il wattaggio è sceso a 30 dopo l'ultimo picco
-       
-        
-  
-        // Verifica se il wattaggio supera i 1400 watt per più di 10 secondi per contare un'accesione
-        if (this.receivedData.watt > 1400) {
-          i++;
-          if (i === 10) {
-            this.accensioni++;
-           
-          }
-        } else {
-          i = 0;
-        }
-  
-        lastPeakWatt = this.receivedData.watt;
-        lastPeakTimestamp = currentTimestamp;
-        console.log(lastPeakTimestamp, lastPeakWatt);
-      }else  if (lastPeakWatt > 1000 && this.receivedData.watt < 30) {
-        const timeSinceLastPeak = currentTimestamp - lastPeakTimestamp;
-        console.log(timeSinceLastPeak, currentTimestamp, lastPeakTimestamp);
-
-        // Verifica se il wattaggio è sceso a 30 in meno di 10 secondi dopo l'ultimo picco
-        if (timeSinceLastPeak < 10000) {
-          this.coffeeCount++;
-          lastPeakWatt=0;
-        } else {
-          this.coffeeCount += 2;
-          lastPeakWatt=0;
-        }
-      }
+      }, 5000);
   
       this.writeDataToInfluxDB(data);
     });
@@ -80,6 +54,7 @@ class CoffeeManager {
     this.connectToPlugManager();
   }
   
+
   connectToPlugManager() {
     this.plugManager.start();
 
@@ -95,6 +70,43 @@ class CoffeeManager {
       this.connectToPlugManager();
     }, 5000);
   }
+
+  writeCountToInfluxDB(count) {
+    if (this.receivedData) {
+      let field;
+      switch (count) {
+        case -1:
+          field = "spegnimento";
+          break;
+        case 0:
+          field = "accensione";
+          break;
+        case 1:
+          field = "1Caffe";
+          break;
+        case 2:
+          field = "2Caffe";
+          break;
+        default:
+          field = "unknown";
+      }
+  
+      const point = new Point('coffee')
+        .tag('deviceid', this.plugManager.deviceId)
+        .intField(field, 1);
+  
+      writeApi.writePoint(point);
+      writeApi
+        .flush()
+        .then(() => {
+          console.log('Data written to InfluxDB');
+        })
+        .catch((error) => {
+          console.error('Error writing data to InfluxDB:', error);
+        });
+    }
+  }
+  
 
   writeDataToInfluxDB(data) {
     if (this.receivedData) {
@@ -115,13 +127,14 @@ class CoffeeManager {
         });
     }
   }
+
   getAllData() {
     const accensioni = this.getAccensioni();
     const coffeeCount = this.countCoffes();
     const jsonData = {
-      id :100,
+      id: 100,
       accensioni: accensioni,
-      coffeeCount: coffeeCount-accensioni*2
+      coffeeCount: coffeeCount - accensioni * 2,
     };
     console.log(jsonData);
 
@@ -132,61 +145,77 @@ class CoffeeManager {
     const timestamp = new Date().toISOString();
     const data = {
       receivedData: this.receivedData,
-      timestamp: timestamp
+      timestamp: timestamp,
     };
     return data;
   }
 
-  getDataAndCount() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Imposta l'orario a mezzanotte per ottenere l'inizio della giornata corrente
-    const currentTime = new Date();
-
+  getDataCount(start, end) {
+    if(start && end){
+      const startTimestamp = new Date(start).toISOString();
+      const endTimestamp = new Date(end).toISOString();
     const query = `from(bucket: "${bucket}")
-      |> range(start: ${today.toISOString()}, stop: ${currentTime.toISOString()})
-      |> filter(fn: (r) => r._measurement == "coffee" and r.type == "count")`;
+      |> range(start: ${startTimestamp}, stop: ${endTimestamp})
+      |> filter(fn: (r) => r._measurement == "coffee")
+      |> group(columns: ["_field"])
+      |> count()`;
 
+  
     return client
       .getQueryApi(org)
       .collectRows(query)
       .then((result) => {
-        let totalCoffeeToday = 0;
-        let count1 = 0;
-        let count2 = 0;
-
+        console.log(result);
+        const fieldCounts = {};
         result.forEach((row) => {
-          const countValue = row._value;
-          totalCoffeeToday += countValue;
-
-          if (countValue === 1) {
-            count1++;
-          } else if (countValue === 2) {
-            count2++;
-          }
+          if(row._field!="count"){
+          const field = row._field;
+          const count = row._value;
+          fieldCounts[field] = count;}
         });
-
-        const jsonData = {
-          macchinettaCaffe: this.getData(),
-          totalCoffeeToday: totalCoffeeToday,
-          count1: count1,
-          count2: count2,
-        };
-
-        return jsonData;
+  
+        return fieldCounts;
       })
       .catch((error) => {
         console.error('Error:', error);
         throw new Error('Internal Server Error');
       });
   }
-  getAccensioni(){
-    return this.accensioni;
-  }
-  countCoffes(){
-    return this.coffeeCount;
-  }
+}
 
-  
+getDataWatt(start, end) {
+  return new Promise((resolve, reject) => {
+    if (start && end) {
+      const startTimestamp = new Date(start).toISOString();
+      const endTimestamp = new Date(end).toISOString();
+
+      const query = `from(bucket: "${bucket}")
+        |> range(start: ${startTimestamp}, stop: ${endTimestamp})
+        |> filter(fn: (r) => r._field == "watt")
+        |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`;
+
+      client.getQueryApi(org).collectRows(query)
+        .then((result) => {
+          const data = [];
+
+          result.forEach((row) => {
+            const value = row._value;
+            const timestamp = new Date(row._time).getTime();
+
+            data.push({ value, timestamp });
+          });
+
+          resolve(data);
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+          reject(new Error('Internal Server Error'));
+        });
+    } else {
+      reject(new Error('Missing start and end timestamps'));
+    }
+  });
+}
 }
 
 module.exports = CoffeeManager;

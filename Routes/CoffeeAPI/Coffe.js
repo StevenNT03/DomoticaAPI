@@ -5,7 +5,6 @@ const coffeeManager = require('../../obj/SmartPlugObj/coffeeManager');
 const dotenv = require('dotenv');
 dotenv.config(); // Carica le variabili d'ambiente dal file .env
 
-
 const firstMachine = new coffeeManager("741301910000e45539823e5a");
 firstMachine.start();
 
@@ -19,72 +18,100 @@ const org = process.env.INFLUX_ORG;
 const bucket = process.env.INFLUX_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
+
 /**
  * @swagger
- * /api/coffee/{number}:
- *   post:
- *     tags:
- *       - CoffeeAPI
- *     summary: Get data from coffee smart plug
- *     parameters:
- *       - name: number
- *         in: path
- *         description: Number parameter for coffee smart plug
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       '200':
- *         description: OK. Returns data from the coffee smart plug.
+ * tags:
+ *   name: CoffeeAPI
+ *   description: API per ottenere dati dal coffee smart plug
  */
-router.post('/:number', (req, res) => {
-  const { number } = req.params;
-  console.log("numero caffe inseriti", number);
 
-  // Verifica se `number` è un numero valido
-  const count = parseInt(number);
-  if (isNaN(count)) {
-    res.status(400).send('Invalid count value');
-    return;
-  }
-  
-  // Creazione di un punto di dati
-  const point = new Point('coffee')
-    .tag('type', 'count')
-    .intField('count', count);
-
-  // Scrittura del punto nel database
-  writeApi.writePoint(point);
-
-  res.send('Dati del caffè registrati con successo!');
-});
 /**
  * @swagger
- * /api/coffee/data:
+ * /api/coffee/data/count:
  *   get:
  *     tags:
  *       - CoffeeAPI
- *     summary: Get data from coffee smart plug
+ *     summary: Ottieni il conteggio dei dati dal coffee smart plug
+ *     parameters:
+ *       - in: query
+ *         name: start
+ *         required: true
+ *         description: Data di inizio (formato ISO 8601)
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: end
+ *         required: true
+ *         description: Data di fine (formato ISO 8601)
+ *         schema:
+ *           type: string
  *     responses:
  *       '200':
  *         description: OK
  */
-router.get('/data', (req, res) => {
-  const coffes = firstMachine.getAllData();
-  firstMachine
-    .getDataAndCount()
-    .then((data) => {
-      const jsonData = {
-        coffes: coffes,
-        data: data
-      };
-      res.json(jsonData);
-    })
-    .catch((error) => {
-      console.error('Error:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    });
+router.get('/data/count', (req, res) => {
+  const { start, end } = req.query;
+  if (start && end) {
+    firstMachine
+      .getDataCount(start, end)
+      .then((data) => {
+        const jsonData = {
+          data: data,
+        };
+        res.json(jsonData);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+  } else {
+    res.status(400).json({ error: 'Bad Request' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/coffee/data/watt:
+ *   get:
+ *     tags:
+ *       - CoffeeAPI
+ *     summary: Ottieni i dati di watt dal coffee smart plug
+ *     parameters:
+ *       - in: query
+ *         name: start
+ *         required: true
+ *         description: Data di inizio (formato ISO 8601)
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: end
+ *         required: true
+ *         description: Data di fine (formato ISO 8601)
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
+router.get('/data/watt', (req, res) => {
+  const { start, end } = req.query;
+  if (start && end) {
+    firstMachine
+      .getDataWatt(start, end)
+      .then((data) => {
+        const jsonData = {
+          data: data,
+        };
+        res.json(jsonData);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+  } else {
+    res.status(400).json({ error: 'Bad Request' });
+  }
 });
 
 module.exports = router;
-
