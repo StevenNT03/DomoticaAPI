@@ -4,9 +4,13 @@ const { InfluxDB } = require('@influxdata/influxdb-client');
 const coffeeManager = require('../../obj/SmartPlugObj/coffeeManager');
 const dotenv = require('dotenv');
 dotenv.config(); // Carica le variabili d'ambiente dal file .env
-
-const firstMachine = new coffeeManager("741301910000e45539823e5a");
-firstMachine.start();
+let publisher;
+let firstMachine;
+  function setPublisher(P){
+  publisher=  P;
+  firstMachine = new coffeeManager("741301910000e45539823e5a",publisher);
+  firstMachine.start();
+}
 
 const router = express.Router();
 
@@ -17,7 +21,6 @@ const token = process.env.INFLUX_TOKEN;
 const org = process.env.INFLUX_ORG;
 const bucket = process.env.INFLUX_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
-const writeApi = client.getWriteApi(org, bucket);
 
 /**
  * @swagger
@@ -57,7 +60,8 @@ router.get('/data/count', (req, res) => {
       .getDataCount(start, end)
       .then((data) => {
         const jsonData = {
-          data: data,
+          id : 100,
+          data: data
         };
         res.json(jsonData);
       })
@@ -114,4 +118,29 @@ router.get('/data/watt', (req, res) => {
   }
 });
 
-module.exports = router;
+/**
+ * @swagger
+ * /api/coffee/registers:
+ *   get:
+ *     tags:
+ *       - CoffeeApi
+ *     summary: Get data from Coffe smart plug
+ *     responses:
+ *       '200':
+ *         description: OK
+ */
+router.get('/registers', (req, res) => {
+  const data = firstMachine.getData();
+  const jsonData = {
+    id : 400,
+    data: data
+  };
+  res.json(jsonData);
+});
+
+const coffeApi ={
+  router,
+  setPublisher
+}
+
+module.exports = coffeApi;

@@ -14,12 +14,13 @@ const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
 
 class AirManager {
-  constructor(deviceId) {
+  constructor(deviceId, publisher) {
     this.deviceId = deviceId;
     this.plugManager = new PlugManager(this.deviceId);
     this.receivedData = null;
     this.previousWattValue = null;
     this.isNewCommunication = false;
+    this.publisher=publisher;
     console.log("air in comunicazione");
   }
 
@@ -50,6 +51,15 @@ class AirManager {
 
     this.plugManager.on('message', (data) => {
       this.isNewCommunication = true;
+    
+
+      const sse={
+        id : 400,
+        data:{
+          receivedData : data.plugdata
+          }
+      }
+      this.publisher.sendEventsToAll(sse);
     
       this.receivedData = data.plugdata;
       //console.log(this.receivedData);
@@ -127,7 +137,6 @@ class AirManager {
     const timestamp = new Date().toISOString();
     const data = {
       receivedData: this.receivedData ? JSON.parse(JSON.stringify(this.receivedData)) : null,
-      timestamp: timestamp
     };
     return data;
   }

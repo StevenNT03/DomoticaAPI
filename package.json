@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@influxdata/influxdb-client": "^1.33.2",
+    "aedes": "^0.49.0",
     "axios": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
@@ -17,6 +18,8 @@
     "express": "^4.18.2",
     "jsmodbus": "^4.0.6",
     "moment-timezone": "^0.5.43",
+    "mqtt": "^4.3.7",
+    "net": "^1.0.2",
     "newrelic": "^10.1.2",
     "nodemon": "^2.0.22",
     "path": "^0.12.7",

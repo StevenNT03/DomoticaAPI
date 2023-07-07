@@ -1,6 +1,11 @@
 const axios = require('axios');
 const { InfluxDB } = require('@influxdata/influxdb-client');
 const dotenv = require('dotenv');
+const mqtt = require('mqtt');
+const { json } = require('express');
+
+
+
 dotenv.config();
 const ipAddress = process.env.INFLUX_IP_ADDRESS;
 const token = process.env.INFLUX_TOKEN;
@@ -9,65 +14,77 @@ const bucket = process.env.INFLUX_SHELLY_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
 const writeApi = client.getWriteApi(org, bucket);
 
-function createShelly(ipAddress) {
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function createShelly(ipAddress, id, rooms, publisher) {
   const shellyUrl = `http://${ipAddress}/relay/`;
   const statusUrl = `http://${ipAddress}/rpc/Switch.GetStatus?id=`;
   console.log("shelly IP: " + ipAddress + " In comunicazione");
+  let status = [];
+
+  for (let i = 0; i < rooms.length; i++) {
+    const url = statusUrl + i;
+    try {
+      const response = await axios.get(url);
+      status[i] = {
+        state: response.data,
+        room: rooms[i]
+      };
+      await sleep(200);
+    } catch (error) {
+      console.log(`Impossibile ottenere lo stato del relè ${i} del dispositivo Shelly.`);
+      throw error;
+    }
+  }
+ 
 
   function getShellyUrl(relayId) {
     return shellyUrl + relayId;
   }
-  
+
+
+  // Configurazione del broker MQTT
+  const brokerUrl = 'mqtt://192.168.1.6:1883'; // Indirizzo del broker MQTT
+
+
+  // Connessione al broker MQTT
+  const mqttClient = mqtt.connect(brokerUrl);
+
+  // Evento di connessione al broker MQTT
+  mqttClient.on('connect', () => {
+    console.log('Connesso al broker MQTT');
+   
+    mqttClient.subscribe(`${ipAddress}/status/#`);
+  });
+
+  // Evento di ricezione di un messaggio MQTT
+  mqttClient.on('message', (topic, message) => {
+    message=JSON.parse(message);
+    if(topic.startsWith(ipAddress +'/status/switch')){
+      let Index=message.id;
+      message.id=id*4+message.id;
+       
+      const sse ={
+        room : rooms[Index],
+        state : message
+      }
+    status[Index]={
+      room : rooms[Index],
+      state : message
+    }
+    publisher.sendEventsToAll(sse);
+    }
+  });
+
   const shelly = {
     // Ottiene lo stato di un relè specifico
-    getRelayState(relayId) {
-      const url = getShellyUrl(relayId);
-      return axios.get(url)
-        .then(response => {
-          
-          const currentState = response.data.ison;
-          return {
-            relayId: relayId,
-            ipAddress: ipAddress,
-            ison: currentState
-          };
-        })
-        .catch(error => {
-          console.log(`Impossibile ottenere lo stato del relè ${relayId} del dispositivo Shelly.`);
-          throw error;
-        });
-    },
-
-    // Ottiene lo stato dettagliato di un relè specifico
     getRelayStatus(relayId) {
-      const url = statusUrl + relayId;
-      return axios.get(url)
-        .then(response => { return response.data})
-        .catch(error => {
-          console.log(`Impossibile ottenere lo stato del relè ${relayId} del dispositivo Shelly.`);
-          throw error;
-        });
+      return status[relayId];
     },
-
-    // Inverte lo stato di un relè specifico (lo accende se è spento e viceversa)
-    toggleRelay(relayId, realID) {
-      return this.getRelayState(relayId)
-        .then(currentState => {
-          const turn = !currentState.ison; // Inverti lo stato booleano
-          const url = getShellyUrl(relayId) + `?turn=${turn ? 'on' : 'off'}`;
-          return axios.post(url)
-            .then(() => {
-              return {
-                relayId: relayId,
-                message: `Il relè ${realID} è stato ${turn ? 'acceso' : 'spento'}.`
-              };
-            })
-            .catch(error => {
-              console.log(`Impossibile ${turn ? 'accendere' : 'spegnere'} il relè ${realID} del dispositivo Shelly.`);
-              throw error;
-            });
-        });
-    },
+  
 
     // Spegne tutti i relè del dispositivo Shelly
     turnOffAllRelays() {
@@ -98,7 +115,7 @@ function createShelly(ipAddress) {
       return axios.post(url)
         .then(() => {
           return {
-            relayId: relayId,
+            relayId: parseInt(realID),
             message: `Il relè ${realID} è stato acceso.`
           };
         })
@@ -114,7 +131,7 @@ function createShelly(ipAddress) {
       return axios.post(url)
         .then(() => {
           return {
-            relayId: relayId,
+            relayId: parseInt(realID),
             message: `Il relè ${realID} è stato spento.`
           };
         })
@@ -122,11 +139,12 @@ function createShelly(ipAddress) {
           console.log(`Impossibile spegnere il relè ${realID} del dispositivo Shelly.`);
           throw error;
         });
-    }
+    },
+
+   
   };
 
   return shelly;
 }
 
 module.exports = createShelly;
-

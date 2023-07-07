@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const  createTplink= require('../../obj/tplinkManager'); 
-const tplink = createTplink("192.168.1.26"); // Crea l'oggetto TP-Link con l'indirizzo IP
-
+let tplink;
+function setPublisher(P){
+ tplink = createTplink("192.168.1.26", P); 
+ tplink.startSavingConsumi();
+}
 
 /**
  * @swagger
@@ -84,6 +87,9 @@ router.get('/status', (req, res) => {
   });
 });
 
+const PlugApi ={
+  router,
+  setPublisher
+}
 
-
-module.exports = router;
+module.exports = PlugApi;

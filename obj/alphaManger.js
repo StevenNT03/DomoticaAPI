@@ -69,7 +69,7 @@ async function queryAveragePowerValues(start, end) {
 }
 
 
-function createAlpha(ip, port) {
+function createAlpha(ip, port, publisher) {
   let client = null;
 
   function createConnection() {
@@ -119,7 +119,16 @@ function createAlpha(ip, port) {
       .then((values) => {
         registerValues = values;
      //   console.log("Registri aggiornati", registerValues);
-
+        const sse ={
+          id : 200,
+          powerUsed: values[0],
+          averagePowerUsed: values[1],
+          energyUsedF1: values[2],
+          energyUsedF2: values[3],
+          energyUsedF3: values[4],
+          currentHour: values[5]
+        }
+        publisher.sendEventsToAll(sse);
         const [powerValue, averagePowerValue] = registerValues;
 
         const instantVariation = lastInstantValue ? (powerValue - lastInstantValue) / lastInstantValue * 100 : 0;
@@ -132,7 +141,7 @@ function createAlpha(ip, port) {
         
           writeApi.writePoint(instantPoint);
           lastInstantValue = powerValue;
-          console.log('Valore scritto nel punto istantanea:', powerValue);
+          
         }
         
         if (!lastAverageValue || (now.getMinutes() % 15 === 0 && now.getSeconds() === 0)) {
@@ -142,7 +151,7 @@ function createAlpha(ip, port) {
         
           writeApi.writePoint(averagePoint);
           lastAverageValue = averagePowerValue;
-          console.log('Valore scritto nel punto media:', averagePowerValue);
+         
         }
       })
       .catch((err) => {
@@ -156,6 +165,8 @@ function createAlpha(ip, port) {
   function getValues() {
     return registerValues;
   }
+
+
 
   return {
     getValues,

@@ -1,9 +1,15 @@
 const express = require('express');
 const AirManager = require('../../obj/SmartPlugObj/AirManager');
-const AirMachine = new AirManager("7413019100004faea16b2f60");
-AirMachine.start();
+const dotenv = require('dotenv');
 const router = express.Router();
-
+dotenv.config(); // Carica le variabili d'ambiente dal file .env
+let publisher;
+let AirMachine;
+  function setPublisher(P){
+  publisher=  P; 
+   AirMachine = new AirManager("7413019100004faea16b2f60",publisher);
+  AirMachine.start();
+}
 /**
  * @swagger
  * /api/air/registers:
@@ -73,5 +79,9 @@ router.get('/data', async (req, res) => {
     res.status(400).json({ error: 'Missing start or end parameter' });
   }
 });
+const AirAPI ={
+  router,
+  setPublisher
+}
 
-module.exports = router;
+module.exports = AirAPI;

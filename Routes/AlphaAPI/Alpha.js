@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 
 const createAlpha = require('../../obj/alphaManger');
-
+let alpha;
 const net = require('net');
-
-const alpha = createAlpha('192.168.1.25', 502);
+function setPublisher (P){
+  alpha = createAlpha('192.168.1.25', 502, P);
+}
 /**
  * @swagger
  * /api/alpha/registers:
@@ -132,8 +133,11 @@ router.get('/data/average', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
-module.exports = router;
+const AlphaAPI={
+  router,
+  setPublisher
+}
+module.exports = AlphaAPI;
 
 
 

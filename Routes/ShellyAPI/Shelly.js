@@ -11,7 +11,10 @@ const token = process.env.INFLUX_TOKEN;
 const org = process.env.INFLUX_ORG;
 const bucket = process.env.INFLUX_SHELLY_BUCKET;
 const client = new InfluxDB({ url: `http://${ipAddress}:8086`, token: token });
-const shellyAdmin = createAdministrator();
+let shellyAdmin;
+function setPublisher(P){
+   shellyAdmin = createAdministrator(P);
+}
 
 /**
  * @swagger
@@ -241,5 +244,8 @@ router.get('/:relayID/data', async (req, res) => {
     res.status(400).json({ error: 'Missing values start or end' });
   }
 });
-
-module.exports = router;
+const ShellyApi={
+  router,
+  setPublisher
+}
+module.exports = ShellyApi;

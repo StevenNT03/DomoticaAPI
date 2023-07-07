@@ -14,20 +14,27 @@ const writeApi = client.getWriteApi(org, bucket);
 const recognize = require("../SmartPlugObj/coffeRecognizer/recognizer");
 
 class CoffeeManager {
-  constructor(deviceId) {
+  constructor(deviceId, publisher) {
     this.plugManager = new PlugManager(deviceId);
     this.accensioni = 0;
     this.coffeeCount = 0;
     this.communicationArray = {v: [], t:[]};
     this.timeout = null;
     this.receivedData=null;
+    this.publisher=publisher;
   }
 
   start() {
     let i = 0;
     
     this.plugManager.on('message', (data) => {
-      console.log('Data received:', data);
+      const sse={
+        id : 100,
+        data:{
+        receivedData : data.plugdata
+        }
+      }
+      this.publisher.sendEventsToAll(sse);
       this.receivedData= data.plugdata;
          
       // Aggiungi i nuovi dati al singolo oggetto nell'array
@@ -36,11 +43,17 @@ class CoffeeManager {
       this.communicationArray.t.push(data.timestamp);
       }
       let count=9;
+      let notify;
       // Resetta il timeout a 7 secondi ogni volta che viene ricevuta una comunicazione
       clearTimeout(this.timeout);
       this.timeout = setTimeout(() => {
         if(this.communicationArray.v.length>0){
         count = recognize(this.communicationArray);}
+        notify = {
+          id : 1000,
+          count
+        }
+        this.publisher.sendEventsToAll(notify);
         if(count!=9){
         this.writeCountToInfluxDB(count);}
         this.communicationArray.v = [];
@@ -82,10 +95,10 @@ class CoffeeManager {
           field = "accensione";
           break;
         case 1:
-          field = "1Caffe";
+          field = "UNCaffe";
           break;
         case 2:
-          field = "2Caffe";
+          field = "DUECaffe";
           break;
         default:
           field = "unknown";
@@ -145,7 +158,6 @@ class CoffeeManager {
     const timestamp = new Date().toISOString();
     const data = {
       receivedData: this.receivedData,
-      timestamp: timestamp,
     };
     return data;
   }
